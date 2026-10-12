@@ -118,6 +118,8 @@ def main():
     open(os.path.join(a.out, 'app.bin'), 'wb').write(enc(key, page))
     open(os.path.join(a.out, 'index.html'), 'w').write(GATE.replace('__SALT__', base64.b64encode(salt).decode()).replace('__ITER__', str(ITER)))
     open(os.path.join(a.out, 'robots.txt'), 'w').write('User-agent: *\nDisallow: /\n')
+    open(os.path.join(a.out, '_redirects'), 'w').write('/tools/*    /404.html   404!\n/README.md  /404.html   404!\n')
+    open(os.path.join(a.out, '404.html'), 'w').write('<!doctype html><title>Not found</title><p>Not found.</p>\n')
     open(os.path.join(a.out, '_headers'), 'w').write('/*\n  X-Robots-Tag: noindex, nofollow\n  Referrer-Policy: no-referrer\n/d/*\n  Cache-Control: no-cache\n/app.bin\n  Cache-Control: no-cache\n')
     tot = sum(os.path.getsize(os.path.join(r, f)) for r, _, fs in os.walk(a.out) for f in fs)
     print(f'built {a.out}: {sum(len(v) for v in idx["c"].values())} single docs, bundles {idx["b"]}, total {tot/1e6:.1f} MB; salt {base64.b64encode(salt).decode()}')
