@@ -1,6 +1,10 @@
-"""Build a password-protected, read-only copy of NolCom for Netlify (or any static host).
+"""Build a read-only copy of NolCom for Netlify (or any static host).
 
-  python3 netlify_build.py --password '...' [--dump /tmp/claude-0/dbdump] [--out /mnt/user-data/outputs/netlify_site]
+  python3 netlify_build.py --public [--dump /tmp/claude-0/dbdump] [--out /mnt/user-data/outputs/netlify_site]
+  python3 netlify_build.py --password '...' --salt '...'   (password-protected variant)
+
+--public (the current setting, Oct 13 2026): no password. The files are still stored in the same packed format, but the key
+ships in index.html and the page opens straight away, so anyone with the URL can read everything.
 
 Everything (the page and every database document) is encrypted with AES-256-GCM under a key derived from the
 password (PBKDF2-SHA256, 310k iterations). The host only ever stores ciphertext; the browser decrypts after the
@@ -88,11 +92,28 @@ document.getElementById('f').addEventListener('submit',async e=>{ e.preventDefau
   }catch(err){ msg.textContent='Wrong password.'; btn.disabled=false; btn.textContent='Open'; } });
 </script></body></html>'''
 
+GATE_PUBLIC = r'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>NolCom</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f5f8;color:#5b6475;font:15px system-ui,-apple-system,Segoe UI,sans-serif}
+@media (prefers-color-scheme:dark){body{background:#0f131b;color:#9aa3b5}}</style></head><body><p id="m">Loading NolCom…</p>
+<script>
+const K="__KEY__";
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+(async()=>{ try{ sessionStorage.setItem('nck',K); }catch(e){}
+  try{ const k=await crypto.subtle.importKey('raw',b64(K),'AES-GCM',false,['decrypt']);
+    const r=await fetch('app.bin'); const b=new Uint8Array(await r.arrayBuffer());
+    const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b.slice(0,12)},k,b.slice(12));
+    const html=await new Response(new Blob([pt]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+    document.open(); document.write(html); document.close();
+  }catch(e){ document.getElementById('m').textContent='NolCom could not load. Refresh the page.'; } })();
+</script></body></html>'''
+
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument('--password', required=True); ap.add_argument('--dump', default='/tmp/claude-0/dbdump')
+    ap = argparse.ArgumentParser(); ap.add_argument('--password'); ap.add_argument('--public', action='store_true'); ap.add_argument('--dump', default='/tmp/claude-0/dbdump')
     ap.add_argument('--page', default='/mnt/user-data/outputs/cbb-book/index.html'); ap.add_argument('--out', default='/mnt/user-data/outputs/netlify_site')
     ap.add_argument('--salt'); a = ap.parse_args()
-    salt = base64.b64decode(a.salt) if a.salt else os.urandom(16); key = key_from(a.password, salt)
+    if not a.public and not a.password: ap.error('give --public or --password')
+    salt = base64.b64decode(a.salt) if a.salt else os.urandom(16); key = os.urandom(32) if a.public else key_from(a.password, salt)
     if os.path.exists(a.out): shutil.rmtree(a.out)
     os.makedirs(os.path.join(a.out, 'd'))
     idx = {'b': [], 'c': {}, 'f': {}}
@@ -116,12 +137,12 @@ def main():
     i = page.find('<body'); j = page.find('>', i) + 1
     page = page[:j] + banner + page[j:]
     open(os.path.join(a.out, 'app.bin'), 'wb').write(enc(key, page))
-    open(os.path.join(a.out, 'index.html'), 'w').write(GATE.replace('__SALT__', base64.b64encode(salt).decode()).replace('__ITER__', str(ITER)))
+    open(os.path.join(a.out, 'index.html'), 'w').write(GATE_PUBLIC.replace('__KEY__', base64.b64encode(key).decode()) if a.public else GATE.replace('__SALT__', base64.b64encode(salt).decode()).replace('__ITER__', str(ITER)))
     open(os.path.join(a.out, 'robots.txt'), 'w').write('User-agent: *\nDisallow: /\n')
     open(os.path.join(a.out, '_redirects'), 'w').write('/tools/*    /404.html   404!\n/README.md  /404.html   404!\n')
     open(os.path.join(a.out, '404.html'), 'w').write('<!doctype html><title>Not found</title><p>Not found.</p>\n')
     open(os.path.join(a.out, '_headers'), 'w').write('/*\n  X-Robots-Tag: noindex, nofollow\n  Referrer-Policy: no-referrer\n/d/*\n  Cache-Control: no-cache\n/app.bin\n  Cache-Control: no-cache\n')
     tot = sum(os.path.getsize(os.path.join(r, f)) for r, _, fs in os.walk(a.out) for f in fs)
-    print(f'built {a.out}: {sum(len(v) for v in idx["c"].values())} single docs, bundles {idx["b"]}, total {tot/1e6:.1f} MB; salt {base64.b64encode(salt).decode()}')
+    print(f'built {a.out} ({"public" if a.public else "password"}): {sum(len(v) for v in idx["c"].values())} single docs, bundles {idx["b"]}, total {tot/1e6:.1f} MB; salt {base64.b64encode(salt).decode()}')
 
 if __name__ == '__main__': main()
