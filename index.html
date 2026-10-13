@@ -1,32 +1,15 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow"><title>NolCom</title>
-<style>:root{--bg:#f4f5f8;--ink:#141a26;--ink2:#5b6475;--rule:#d9dde6;--panel:#fff;--acc:#1f4fb3}
-@media (prefers-color-scheme:dark){:root{--bg:#0f131b;--ink:#e8ebf2;--ink2:#9aa3b5;--rule:#2a3140;--panel:#161b25;--acc:#7da2ff}}
-body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;padding:16px;box-sizing:border-box}
-form{background:var(--panel);border:1px solid var(--rule);border-radius:12px;padding:28px 26px;width:100%;max-width:360px;box-sizing:border-box}
-h1{font-size:22px;margin:0 0 4px}p{color:var(--ink2);margin:0 0 18px;font-size:14px}
-input[type=password]{width:100%;box-sizing:border-box;font-size:16px;padding:11px 12px;border:1px solid var(--rule);border-radius:8px;background:var(--bg);color:var(--ink)}
-label{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--ink2);margin:12px 0 16px}
-button{width:100%;font:600 16px system-ui,sans-serif;padding:11px;border:0;border-radius:8px;background:var(--acc);color:#fff;cursor:pointer}
-#msg{color:#c0392b;font-size:14px;min-height:20px;margin:10px 0 0}</style></head>
-<body><form id="f"><h1>NolCom</h1><p>Enter the password to open the site.</p>
-<input type="password" id="pw" autocomplete="current-password" autofocus aria-label="Password">
-<label><input type="checkbox" id="rem"> Remember on this device</label><button id="go">Open</button><div id="msg"></div></form>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f5f8;color:#5b6475;font:15px system-ui,-apple-system,Segoe UI,sans-serif}
+@media (prefers-color-scheme:dark){body{background:#0f131b;color:#9aa3b5}}</style></head><body><p id="m">Loading NolCom…</p>
 <script>
-const SALT="YyMPhp+VqnkWDXNyTcJ14g==", ITER=310000;
-const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0)), tob64=u=>btoa(String.fromCharCode(...new Uint8Array(u)));
-async function openWith(raw){
-  const k=await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['decrypt']);
-  const r=await fetch('app.bin'); const b=new Uint8Array(await r.arrayBuffer());
-  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b.slice(0,12)},k,b.slice(12));
-  const html=await new Response(new Blob([pt]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
-  document.open(); document.write(html); document.close();
-}
-(async()=>{ const s=sessionStorage.getItem('nck')||localStorage.getItem('nck'); if(s){ try{ sessionStorage.setItem('nck',s); await openWith(b64(s)); return; }catch(e){ sessionStorage.removeItem('nck'); localStorage.removeItem('nck'); } } })();
-document.getElementById('f').addEventListener('submit',async e=>{ e.preventDefault(); const msg=document.getElementById('msg'), btn=document.getElementById('go');
-  btn.disabled=true; msg.textContent=''; btn.textContent='Opening…';
-  try{ const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(document.getElementById('pw').value),'PBKDF2',false,['deriveBits']);
-    const raw=await crypto.subtle.deriveBits({name:'PBKDF2',salt:b64(SALT),iterations:ITER,hash:'SHA-256'},base,256);
-    await openWith(raw); const s=tob64(raw); sessionStorage.setItem('nck',s); if(document.getElementById('rem')&&document.getElementById('rem').checked) localStorage.setItem('nck',s);
-  }catch(err){ msg.textContent='Wrong password.'; btn.disabled=false; btn.textContent='Open'; } });
+const K="gbTZrf17KvrzfkF3jj6bxoTIOtht29iaTR6RmU3idNQ=";
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+(async()=>{ try{ sessionStorage.setItem('nck',K); }catch(e){}
+  try{ const k=await crypto.subtle.importKey('raw',b64(K),'AES-GCM',false,['decrypt']);
+    const r=await fetch('app.bin'); const b=new Uint8Array(await r.arrayBuffer());
+    const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b.slice(0,12)},k,b.slice(12));
+    const html=await new Response(new Blob([pt]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+    document.open(); document.write(html); document.close();
+  }catch(e){ document.getElementById('m').textContent='NolCom could not load. Refresh the page.'; } })();
 </script></body></html>
