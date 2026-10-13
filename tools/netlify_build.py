@@ -3,8 +3,8 @@
   python3 netlify_build.py --public [--dump /tmp/claude-0/dbdump] [--out /mnt/user-data/outputs/netlify_site]
   python3 netlify_build.py --password '...' --salt '...'   (password-protected variant)
 
---public (the current setting, Oct 13 2026): no password. The files are still stored in the same packed format, but the key
-ships in index.html and the page opens straight away, so anyone with the URL can read everything.
+--password (the current setting again since Oct 13 2026, midday) with the fixed salt in tools/salt.txt. The password is never
+stored in this repo; the scheduled refresh passes it in. --public (used briefly on Oct 13 2026) ships the key in index.html instead.
 
 Everything (the page and every database document) is encrypted with AES-256-GCM under a key derived from the
 password (PBKDF2-SHA256, 310k iterations). The host only ever stores ciphertext; the browser decrypts after the
