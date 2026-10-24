@@ -15,8 +15,8 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 
 ITER = 310_000
-BUNDLE = {'teams', 'scout', 'previews', 'reports', 'injrep', 'recaps', 'toplines', 'kp', 'gidx', 'slate', 'notes', 'threads', 'updates'}   # small collections: one file each
-SKIP = {'overrides', 'live'}
+BUNDLE = {'teams', 'scout', 'previews', 'reports', 'injrep', 'recaps', 'toplines', 'kp', 'gidx', 'slate', 'notes', 'threads', 'updates', 'overrides'}   # small collections: one file each
+SKIP = {'live'}   # overrides (site grade edits) are bundled since Oct 24 2026 so the copy matches the site
 
 def key_from(pw, salt):
     return PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=ITER).derive(pw.encode())
