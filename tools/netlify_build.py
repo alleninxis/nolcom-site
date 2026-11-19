@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives import hashes
 
 ITER = 310_000
 BUNDLE = {'teams', 'scout', 'previews', 'reports', 'injrep', 'recaps', 'toplines', 'kp', 'gidx', 'slate', 'notes', 'threads', 'updates', 'overrides'}   # small collections: one file each
-SKIP = {'live'}   # overrides (site grade edits) are bundled since Oct 24 2026 so the copy matches the site
+SKIP = set()   # Nov 19 2026: 'live' (live/current ratings, mx, proposed, rating history) now ships so the copy's Ratings board shows the live ratings, not the preseason grades. Overrides are bundled since Oct 24 2026.
 
 def key_from(pw, salt):
     return PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=ITER).derive(pw.encode())
